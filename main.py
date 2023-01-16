@@ -1,6 +1,7 @@
 import numpy as np
 import cv2
 import sys
+import dlib
 
 ##NO TOUCH##
 # Helper Methods
@@ -16,6 +17,26 @@ def reconstructFrame(pyramid, index, levels):
         filteredFrame = cv2.pyrUp(filteredFrame)
     filteredFrame = filteredFrame[:videoHeight, :videoWidth]
     return filteredFrame
+
+#voila jones function    
+def detect_faces(img):
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    faces = face_detector(gray, 1)
+    return faces
+
+#Lukas Kanade tracker
+def track_faces(img, faces):
+    for (i, rect) in enumerate(faces):
+        shape = predictor(img, rect)
+        shape = shape_to_np(shape)
+        for (x, y) in shape:
+            cv2.circle(img, (x, y), 2, (0, 0, 255), -1)
+    return img
+
+#pre-trained face detector
+predictor = dlib.shape_predictor("shape_predictor_68_face_landmarks.dat")
+face_detector = dlib.get_frontal_face_detector()
+
 
 # Webcam Parameters
 webcam = None
@@ -87,6 +108,9 @@ while (True):
         originalFrame = frame.copy()
         originalVideoWriter.write(originalFrame)
 
+    faces = detect_faces(frame)
+    output_frame = track_faces(frame, faces)
+
     detectionFrame = frame[videoHeight//2:realHeight-videoHeight//2, videoWidth//2:realWidth-videoWidth//2, :]
 
     # Construct Gaussian Pyramid
@@ -125,7 +149,7 @@ while (True):
     else:
         cv2.putText(frame, "Calculating BPM...", loadingTextLocation, font, fontScale, fontColor, lineType)
 
-    outputVideoWriter.write(frame)
+    outputVideoWriter.write(output_frame)
     
     ##NO TOUCH##
     if len(sys.argv) != 2:
